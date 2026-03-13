@@ -1,112 +1,74 @@
 import streamlit as st
-import pandas as pd
-import numpy as np
-import pickle
+from Prediction import predict_price
 
-# -------------------------
-# Load Model
-# -------------------------
-with open("car_price_model.pkl", "rb") as f:
-    model_data = pickle.load(f)
+st.title("🚗 Used Car Price Prediction")
 
-model = model_data["model"]
-features = model_data["features"]
+st.write("Enter car details below")
 
-# -------------------------
-# UI
-# -------------------------
-st.set_page_config(page_title="Car Price Predictor", layout="centered")
+kilometer = st.number_input("Kilometers Driven", 0)
+engine = st.number_input("Engine Capacity (cc)", 500)
+max_power = st.number_input("Max Power (bhp)", 20)
+max_torque = st.number_input("Max Torque (Nm)", 50)
 
-st.title("🚗 Car Price Prediction")
-st.write("Enter the car details below to estimate its price.")
+length = st.number_input("Length (mm)", 3000)
+width = st.number_input("Width (mm)", 1400)
+height = st.number_input("Height (mm)", 1200)
 
-# -------------------------
-# Inputs
-# -------------------------
+seating_capacity = st.selectbox("Seating Capacity",[2,4,5,6,7])
+fuel_tank = st.number_input("Fuel Tank Capacity",20)
 
-year = st.number_input("Year of Manufacture", 1995, 2025, 2018)
+car_age = st.slider("Car Age",0,20,5)
 
-kilometer = st.number_input("Kilometers Driven", 0, 500000, 50000)
+transmission = st.selectbox("Transmission",["Manual","Automatic"])
+owner = st.selectbox("Owner",["First","Second","Third","Fourth+"])
 
-engine = st.number_input("Engine Capacity (CC)", 600, 5000, 1200)
+make = st.selectbox("Brand",[
+"Maruti Suzuki","Hyundai","Honda","Toyota",
+"Mahindra","Tata","BMW","Mercedes-Benz","Audi"
+])
 
-power = st.number_input("Max Power", 30, 500, 100)
+fuel_type = st.selectbox("Fuel Type",[
+"Petrol","Diesel","CNG","Electric","Hybrid"
+])
 
-seats = st.number_input("Seating Capacity", 2, 10, 5)
+seller_type = st.selectbox("Seller Type",[
+"Individual","Dealer"
+])
 
-fuel = st.selectbox(
-    "Fuel Type",
-    ["Petrol", "Diesel", "CNG", "LPG"]
-)
+drivetrain = st.selectbox("Drivetrain",[
+"FWD","RWD","AWD"
+])
 
-transmission = st.selectbox(
-    "Transmission",
-    ["Manual", "Automatic"]
-)
+# Convert UI inputs to model format
+if transmission == "Manual":
+    transmission = 0
+else:
+    transmission = 1
 
-owner = st.selectbox(
-    "Owner",
-    ["First", "Second", "Third", "Fourth & Above"]
-)
-
-seller = st.selectbox(
-    "Seller Type",
-    ["Individual", "Dealer"]
-)
-
-# -------------------------
-# Feature Engineering
-# -------------------------
-
-current_year = 2025
-car_age = current_year - year
-
-# -------------------------
-# Prediction
-# -------------------------
+owner_map = {"First":0,"Second":1,"Third":2,"Fourth+":3}
+owner = owner_map[owner]
 
 if st.button("Predict Price"):
 
-    # Create empty dataframe with training columns
-    input_df = pd.DataFrame(columns=features)
-    input_df.loc[0] = 0
+    user_input = {
+        "Kilometer":kilometer,
+        "Engine":engine,
+        "Max Power":max_power,
+        "Max Torque":max_torque,
+        "Length":length,
+        "Width":width,
+        "Height":height,
+        "Seating Capacity":seating_capacity,
+        "Fuel Tank Capacity":fuel_tank,
+        "Car_Age":car_age,
+        "Transmission":transmission,
+        "Owner":owner,
+        "Make":make,
+        "Fuel Type":fuel_type,
+        "Seller Type":seller_type,
+        "Drivetrain":drivetrain
+    }
 
-    # Numeric features
-    if "Kilometer" in features:
-        input_df.at[0, "Kilometer"] = kilometer
+    price = predict_price(user_input)
 
-    if "Engine" in features:
-        input_df.at[0, "Engine"] = engine
-
-    if "Max Power" in features:
-        input_df.at[0, "Max Power"] = power
-
-    if "Seating Capacity" in features:
-        input_df.at[0, "Seating Capacity"] = seats
-
-    if "Car Age" in features:
-        input_df.at[0, "Car Age"] = car_age
-
-    # Categorical encoding
-    fuel_col = f"Fuel Type_{fuel}"
-    if fuel_col in features:
-        input_df.at[0, fuel_col] = 1
-
-    transmission_col = f"Transmission_{transmission}"
-    if transmission_col in features:
-        input_df.at[0, transmission_col] = 1
-
-    owner_col = f"Owner_{owner}"
-    if owner_col in features:
-        input_df.at[0, owner_col] = 1
-
-    seller_col = f"Seller Type_{seller}"
-    if seller_col in features:
-        input_df.at[0, seller_col] = 1
-
-    # Prediction
-    prediction_log = model.predict(input_df)
-
-    prediction = np.expm1(prediction_log)
-
-    st.success(f"💰 Estimated Car Price: ₹ {int(prediction[0]):,}")
+    st.success(f"Estimated Price: ₹ {price:,.2f}")
